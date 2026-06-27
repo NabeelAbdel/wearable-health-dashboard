@@ -1,0 +1,14 @@
+# Raw per-reading exports - large and far more granular than needed, kept local.
+# The aggregated daily_summary.csv IS published so the dashboard runs on real data.
+heart_rate.csv
+steps.csv
+resting_heart_rate.csv
+active_energy.csv
+apple_health_export/
+export.zip
+export.xml
+
+# Python
+__pycache__/
+*.pyc
+.venv/
