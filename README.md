@@ -97,8 +97,16 @@ With MATLAB and the Statistics and Machine Learning Toolbox installed, run `corr
 
 ## Roadmap
 
-- [ ] Hardware sensor prototype (ESP32 + optical heart-rate sensor) for independent data collection
-- [ ] SolidWorks-designed enclosure for the sensor prototype
+This repository is **Phase 1**: the complete software pipeline and dashboard, running on real data. The hardware items below are **planned for Phase 2 and have not been built yet** — they're listed to show where the project is headed, not to claim completed work.
+
+**Phase 2 — Hardware (planned)**
+
+- [ ] PPG heart-rate sensor prototype (ESP32 + optical sensor) to capture pulse data independently of the Apple Watch
+- [ ] SolidWorks-designed enclosure for the sensor
+- [ ] A dedicated dashboard page for the sensor's own captured data
+
+**Other ideas**
+
 - [ ] Resting-heart-rate recovery view
 - [ ] Sleep / recovery insights (pending more consistent sleep-tracking data)
 
