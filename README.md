@@ -2,12 +2,15 @@
 
 A Python + Streamlit pipeline that turns a raw Apple Watch health export into a clean, interactive dashboard of heart-rate and activity trends — with the statistical analysis run in MATLAB. It runs on my own real recorded data.
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Open_App-FF4B4B?logo=streamlit&logoColor=white)](https://nabeel-health-dashboard.streamlit.app/)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.49%2B-FF4B4B?logo=streamlit&logoColor=white)
 ![MATLAB](https://img.shields.io/badge/MATLAB-Statistics%20Toolbox-0076A8?logo=mathworks&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-2EA44F)
 
 > A wellness **trend** tool, not a diagnostic one. It surfaces patterns in personal data; it does not interpret or flag medical conditions.
+
+**🔗 Live demo:** [nabeel-health-dashboard.streamlit.app](https://nabeel-health-dashboard.streamlit.app/)
 
 ![Wearable Health Insights dashboard — daily metric cards, heart-rate trends, and activity trends](dashboard.png)
 
