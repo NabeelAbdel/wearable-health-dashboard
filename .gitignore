@@ -4,6 +4,8 @@ heart_rate.csv
 steps.csv
 resting_heart_rate.csv
 active_energy.csv
+hrv_sdnn.csv
+vo2_max.csv
 apple_health_export/
 export.zip
 export.xml
