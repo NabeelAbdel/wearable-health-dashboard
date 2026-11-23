@@ -56,6 +56,7 @@ This project started on a 48-day export. At n = 39 the corrected correlation was
 |---|---|---|
 | **Overview** | Time-weighted vs naive mean HR with daily min–max envelope, resting HR, steps, active energy | Non-uniform sampling, volume vs intensity |
 | **Cardiovascular** | Minutes per day in five HR zones (stacked), zone table with physiology, Edwards TRIMP training load, resting-HR and HRV (SDNN) baselines with ±1 SD bands and 2 SD anomaly flagging, VO₂max estimate trend | %HRmax zones, training impulse, heart-rate variability, autonomic recovery, cardiorespiratory fitness |
+| **Population context** | My VO₂max estimate and resting HR placed on published US percentile tables for the selected age and sex; steps vs the US adult average; HRV deliberately *not* compared | Reference ranges, why measurement method limits comparability |
 | **Circadian rhythm** | Date × hour heatmap of time-weighted HR, average 24-h profile with IQR band, monitoring density per hour | Circadian autonomic rhythm, nocturnal vagal dominance |
 | **Signal quality** | Per-day sampling bias, monitored hours with low-coverage flags, histogram of inter-sample gaps (sensor duty cycle) | Signal-integrity reporting, adaptive sampling / power budget |
 | **Sensor science** | How PPG works (Beer–Lambert, AC/DC components, green vs red/IR light, motion artefacts, PPG vs ECG) and an **interactive simulator**: synthetic PPG → Butterworth band-pass → peak detection → HR and SDNN estimate, with noise and motion-artefact controls | Photoplethysmography, filtering, peak detection, HRV |
@@ -63,6 +64,19 @@ This project started on a 48-day export. At n = 39 the corrected correlation was
 | **Data & methods** | Pipeline diagram, methods, stated limitations, full daily table with CSV download | Reproducibility |
 
 ![Sensor-science tab — PPG principle and the interactive signal-processing simulator](docs/sensor_science.png)
+
+## Population context — and its limits
+
+The dashboard places two metrics on published US reference tables (age- and sex-specific, selectable in the sidebar):
+
+- **VO₂max** against the FRIEND registry (Kaminsky et al., *Mayo Clin Proc* 2015 — 7,783 lab treadmill tests with gas analysis).
+- **Resting heart rate** against NHANES 1999–2008 (Ostchega et al., *National Health Statistics Reports* no. 41, 2011).
+
+Daily steps are shown next to the single US adult average from NHANES 2005–2006 (Tudor-Locke et al., 2010), flagged as a loose comparison. **HRV is deliberately not compared**: published SDNN norms come from 24-hour ECG, while the Watch reports SDNN from ~1-minute optical windows, and SDNN grows with recording length — the two are on different scales.
+
+Every comparison states its measurement-method gap (wearable estimate vs lab or clinic measurement). The reference data is national; no regional tables exist. It is context, not a health assessment.
+
+![Population-context tab — percentile strips for VO₂max and resting heart rate](docs/population_context.png)
 
 ## Pipeline
 
@@ -107,7 +121,7 @@ wearable-health-dashboard/
 ├── parse_health_data.py         # Streams export.xml -> per-metric CSVs
 ├── build_daily_summary.py       # Raw readings -> daily_summary / hourly_hr / sampling_profile
 ├── correlation_analysis.m       # MATLAB: naive vs corrected correlation, OLS + 95 % CI figure
-├── app.py                       # Streamlit dashboard (7 tabs)
+├── app.py                       # Streamlit dashboard (8 tabs)
 ├── .streamlit/config.toml       # Dark theme
 ├── daily_summary.csv            # One row per day (published)
 ├── hourly_hr.csv                # One row per date x hour (published)
@@ -156,6 +170,7 @@ With MATLAB and the Statistics and Machine Learning Toolbox, run `correlation_an
 - HRV is PPG-derived SDNN from ~1-minute windows; it is not comparable to 24-hour ECG clinical norms.
 - Workout detection from sampling cadence is a proxy, not Apple's workout log.
 - Several correlations are tested without multiple-comparison correction.
+- Population comparisons cross a measurement-method gap (wearable estimate vs lab/clinic) and are national, not regional.
 - Nothing here is diagnostic.
 
 ## Roadmap

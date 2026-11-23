@@ -52,6 +52,42 @@ ZONE_LABELS = ["Zone 1 · Very light", "Zone 2 · Light", "Zone 3 · Moderate",
 ZONE_COLS = ["zone1_min", "zone2_min", "zone3_min", "zone4_min", "zone5_min"]
 MONO = "'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, Consolas, monospace"
 
+# -----------------------------------------------------------------------------
+# Published US reference data (for the "Population context" tab).
+# These are transcribed from the cited tables - they are NOT derived from my data.
+# Each list holds the 5th, 10th, 25th, 50th, 75th, 90th and 95th percentiles.
+# -----------------------------------------------------------------------------
+REF_PCTS = [5, 10, 25, 50, 75, 90, 95]
+
+# VO2max, mL O2/kg/min, measured directly by cardiopulmonary exercise testing on
+# a treadmill. Kaminsky et al., Mayo Clin Proc 2015 (FRIEND registry, 7,783 tests,
+# US adults 20-79 without cardiovascular disease), Table 3.
+VO2_REF = {
+    "Male": {(20, 29): [29.0, 32.1, 40.1, 48.0, 55.2, 61.8, 66.3], (30, 39): [27.2, 30.2, 35.9, 42.4, 49.2, 56.5, 59.8],
+             (40, 49): [24.2, 26.8, 31.9, 37.8, 45.0, 52.1, 55.6], (50, 59): [20.9, 22.8, 27.1, 32.6, 39.7, 45.6, 50.7],
+             (60, 69): [17.4, 19.8, 23.7, 28.2, 34.5, 40.3, 43.0], (70, 79): [16.3, 17.1, 20.4, 24.4, 30.4, 36.6, 39.7]},
+    "Female": {(20, 29): [21.7, 23.9, 30.5, 37.6, 44.7, 51.3, 56.0], (30, 39): [19.0, 20.9, 25.3, 30.2, 36.1, 41.4, 45.8],
+               (40, 49): [17.0, 18.8, 22.1, 26.7, 32.4, 38.4, 41.7], (50, 59): [16.0, 17.3, 19.9, 23.4, 27.6, 32.0, 35.9],
+               (60, 69): [13.4, 14.6, 17.2, 20.0, 23.8, 27.0, 29.4], (70, 79): [13.1, 13.6, 15.6, 18.3, 20.8, 23.1, 24.1]},
+}
+
+# Resting pulse rate, beats/min, counted after ~4 minutes seated rest.
+# Ostchega et al., National Health Statistics Reports no. 41, 2011
+# (NHANES 1999-2008), Tables 2 and 3.
+RHR_REF = {
+    "Male": {(16, 19): [52, 56, 61, 69, 78, 87, 92], (20, 39): [52, 55, 61, 69, 76, 84, 89],
+             (40, 59): [52, 55, 61, 68, 77, 85, 90], (60, 79): [50, 54, 60, 67, 75, 84, 91],
+             (80, 120): [51, 54, 61, 68, 78, 86, 94]},
+    "Female": {(16, 19): [58, 62, 69, 77, 85, 94, 99], (20, 39): [57, 60, 66, 74, 82, 89, 95],
+               (40, 59): [56, 59, 64, 71, 79, 86, 92], (60, 79): [56, 59, 64, 70, 78, 86, 92],
+               (80, 120): [56, 59, 64, 71, 77, 85, 93]},
+}
+
+# Steps per day: one overall figure for US adults aged 20+ (not split by age or sex).
+# Tudor-Locke et al., Int J Behav Nutr Phys Act 2010 (NHANES 2005-2006, hip-worn
+# ActiGraph accelerometer, steps censored to a pedometer-like scale).
+STEPS_REF_US_ADULTS = 6564
+
 st.markdown(
     f"""
     <style>
@@ -322,6 +358,62 @@ def sensor_cross_section_svg() -> str:
 </svg></div>"""
 
 
+def ref_row(table: dict, sex_key: str, age_years: int):
+    """Look up the reference row for a sex and age. Returns (label, values) or None."""
+    for (lo, hi), vals in table[sex_key].items():
+        if lo <= age_years <= hi:
+            return (f"{lo}+" if hi >= 120 else f"{lo}–{hi}"), vals
+    return None
+
+
+def ordinal(n: float) -> str:
+    n = int(round(n))
+    suffix = "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"
+
+
+def estimate_percentile(value: float, vals: list) -> str:
+    """Place a value on a published percentile table by linear interpolation
+    between the tabulated percentiles. Outside the table it is only bounded."""
+    if pd.isna(value):
+        return "—"
+    if value < vals[0]:
+        return "below the 5th percentile"
+    if value > vals[-1]:
+        return "above the 95th percentile"
+    return f"about the {ordinal(np.interp(value, vals, REF_PCTS))} percentile"
+
+
+def percentile_strip(vals: list, value: float, lo: float, hi: float, unit: str, color: str, name: str) -> go.Figure:
+    """Horizontal reference strip: nested 5–95 / 10–90 / 25–75 bands, median tick,
+    and my own value (marker) with the range of my values in the window (whisker)."""
+    fig = go.Figure()
+    bands = [(0, 6, "rgba(154,163,181,0.14)", "5th–95th"), (1, 5, "rgba(154,163,181,0.24)", "10th–90th"),
+             (2, 4, "rgba(154,163,181,0.40)", "25th–75th")]
+    for i, j, fill, label in bands:
+        fig.add_trace(go.Bar(y=[""], x=[vals[j] - vals[i]], base=vals[i], orientation="h", width=0.62,
+                             marker_color=fill, marker_line_width=0, name=f"Reference {label}",
+                             hovertemplate=f"{label}: {vals[i]:g}–{vals[j]:g} {unit}<extra></extra>"))
+    fig.add_shape(type="line", x0=vals[3], x1=vals[3], y0=-0.31, y1=0.31, line=dict(color="#E6EBF5", width=2))
+    for p, v in zip(REF_PCTS, vals):
+        fig.add_annotation(x=v, y=0.34, yanchor="bottom", text=f"{p}th<br><b>{v:g}</b>", showarrow=False,
+                           font=dict(size=10, color=C["ink2"]))
+    if pd.notna(lo) and pd.notna(hi) and hi > lo:
+        fig.add_trace(go.Scatter(x=[lo, hi], y=["", ""], mode="lines", line=dict(color=color, width=3),
+                                 name="My range in this window",
+                                 hovertemplate="my range: " + f"{lo:.1f}–{hi:.1f} {unit}<extra></extra>"))
+    fig.add_trace(go.Scatter(x=[value], y=[""], mode="markers", name=name,
+                             marker=dict(color=color, size=16, symbol="diamond", line=dict(color=C["surface"], width=2)),
+                             hovertemplate=f"{name}: {value:.1f} {unit}<extra></extra>"))
+    fig = base_layout(fig, 230, xtitle=unit)
+    span = max(vals[-1], hi if pd.notna(hi) else value, value) - min(vals[0], lo if pd.notna(lo) else value, value)
+    fig.update_layout(barmode="overlay", hovermode="closest", margin=dict(l=10, r=10, t=40, b=10))
+    fig.update_xaxes(range=[min(vals[0], lo if pd.notna(lo) else value, value) - 0.06 * span,
+                            max(vals[-1], hi if pd.notna(hi) else value, value) + 0.06 * span], showgrid=False)
+    fig.update_yaxes(showticklabels=False, showgrid=False, range=[-0.45, 0.8])
+    return fig
+
+
 def base_layout(fig: go.Figure, height=360, ytitle="", xtitle="", legend=True) -> go.Figure:
     """One consistent chart style: recessive grid, thin marks, legend on top."""
     fig.update_layout(
@@ -356,6 +448,9 @@ with st.sidebar:
     age = st.number_input("Age (for HRmax estimate)", min_value=10, max_value=90, value=20, step=1,
                           help="HRmax ≈ 220 − age (Fox formula). Zones in the pipeline use 200 bpm.")
     hr_max_est = 220 - age
+    sex = st.radio("Sex (for reference tables)", ["Male", "Female"], horizontal=True,
+                   help="Published reference values are split by age and sex. Used only on the "
+                        "Population context tab and the VO₂max chart.")
     hide_low = st.toggle("Hide low-coverage days (< 2 h monitored)", value=False,
                          help="Days where the watch was worn but recorded less than two hours of heart-rate "
                               "data. Days it was not worn at all have no heart-rate values to begin with.")
@@ -462,8 +557,8 @@ kpi(k[3], "Signal coverage", fmt(hr_days["monitored_hours"].mean(), ".1f"), "h/w
 # =============================================================================
 # 5. Tabs
 # =============================================================================
-tab_over, tab_cardio, tab_circ, tab_quality, tab_sensor, tab_stats, tab_data = st.tabs([
-    "Overview", "Cardiovascular", "Circadian rhythm", "Signal quality",
+tab_over, tab_cardio, tab_ctx, tab_circ, tab_quality, tab_sensor, tab_stats, tab_data = st.tabs([
+    "Overview", "Cardiovascular", "Population context", "Circadian rhythm", "Signal quality",
     "Sensor science", "Statistics", "Data & methods"])
 
 # ----------------------------------------------------------------------------- Overview
@@ -638,6 +733,12 @@ with tab_cardio:
                                            line=dict(color=C["red"], width=2, shape="hv"), marker=dict(size=8),
                                            hovertemplate="%{y:.1f} mL/kg/min"))
                 fig = base_layout(fig, 300, ytitle="mL/kg/min", legend=False)
+                _vref = ref_row(VO2_REF, sex, age)
+                if _vref:
+                    fig.add_hrect(y0=_vref[1][2], y1=_vref[1][4], fillcolor="rgba(154,163,181,0.14)", line_width=0,
+                                  annotation_text=f"US reference 25th–75th pct · {sex.lower()} {_vref[0]} · lab-measured",
+                                  annotation_position="top left", annotation_font=dict(size=10, color=C["ink2"]))
+                    fig.add_hline(y=_vref[1][3], line=dict(color=C["ink2"], width=1, dash="dot"))
                 fig.update_xaxes(range=[cal["date"].min(), cal["date"].max()])
                 show(fig)
         with c2:
@@ -650,6 +751,92 @@ with tab_cardio:
                  "not a lab measurement.")
     else:
         st.info("No VO₂max estimates in this window — the Watch only produces one after a qualifying outdoor walk or run.")
+
+# ----------------------------------------------------------------------------- Population context
+with tab_ctx:
+    note("<h4>What this tab is — and is not</h4>"
+         "It places three of my numbers next to <b>published US reference data</b> for the age and sex chosen in the "
+         "sidebar, so a reader can see roughly where they sit in a population. It is context, not a health "
+         "assessment: nothing here is labelled normal or abnormal. Reference data is <b>national</b> and split by age "
+         "and sex only — no published tables exist at city or state level, so there is no \"regional\" comparison. "
+         "Each comparison also crosses a <b>measurement-method gap</b> (a wearable's estimate vs a laboratory or "
+         "clinical measurement), which is spelled out under each chart.", "warn")
+
+    # ---- VO2max ---------------------------------------------------------------
+    section("VO₂max", "my wearable estimate vs lab-measured US reference (FRIEND registry)")
+    vref = ref_row(VO2_REF, sex, age)
+    if not HAS_VO2:
+        st.info("No VO₂max estimates in this window.")
+    elif vref is None:
+        st.info("The FRIEND reference tables cover ages 20–79; no reference row exists for the selected age.")
+    else:
+        v_latest, v_med = vo2_vals.iloc[-1], vo2_vals.median()
+        with st.container(border=True):
+            show(percentile_strip(vref[1], v_latest, vo2_vals.min(), vo2_vals.max(), "mL/kg/min", C["red"],
+                                  "My latest estimate"))
+        note(f"Reference: <b>{sex.lower()}, {vref[0]} years</b>. My latest estimate ({v_latest:.1f}) sits at "
+             f"<b>{estimate_percentile(v_latest, vref[1])}</b>; across this window my {len(vo2_vals)} estimates ranged "
+             f"{vo2_vals.min():.1f}–{vo2_vals.max():.1f} (median {v_med:.1f}, {estimate_percentile(v_med, vref[1])}). "
+             "<br><b>Method gap:</b> the reference values were <i>measured</i> — expired-gas analysis during a maximal "
+             "treadmill test. Mine are <i>estimated</i> by the watch from pace and heart-rate response on outdoor "
+             "walks and runs, with no gas measurement. A wearable estimate can be off for any one "
+             "individual, so the percentile is a rough placement, and the registry itself is a sample of people who "
+             "came in for exercise testing rather than a random sample of the country.")
+
+    # ---- Resting HR -----------------------------------------------------------
+    section("Resting heart rate", "my daily Apple estimates vs US resting pulse reference (NHANES 1999–2008)")
+    rref = ref_row(RHR_REF, sex, age)
+    if rest_recent.empty:
+        st.info("No resting-heart-rate values in this window.")
+    elif rref is None:
+        st.info("The adult reference rows used here start at age 16; no reference row exists for the selected age.")
+    else:
+        r_med = rest_recent.median()
+        with st.container(border=True):
+            show(percentile_strip(rref[1], r_med, rest_recent.quantile(.05), rest_recent.quantile(.95), "bpm",
+                                  C["aqua"], "My median resting HR"))
+        note(f"Reference: <b>{sex.lower()}, {rref[0]} years</b>. My median daily resting HR ({r_med:.0f} bpm over "
+             f"{len(rest_recent)} days) sits at <b>{estimate_percentile(r_med, rref[1])}</b>; the bar shows the middle "
+             f"90 % of my days ({rest_recent.quantile(.05):.0f}–{rest_recent.quantile(.95):.0f} bpm). "
+             "<br><b>Method gap:</b> the survey value is a pulse counted once, by an examiner, after about four minutes "
+             "of seated rest in a clinic. Apple's figure is an algorithmic daily estimate built from background PPG "
+             "readings while still and awake. They target the same quantity but are not the same measurement, so small "
+             "differences in percentile should not be over-read.")
+
+    # ---- Steps ----------------------------------------------------------------
+    section("Daily steps", "my mean vs the US adult average (NHANES 2005–2006) — the loosest of the three")
+    s1, s2, s3 = st.columns(3)
+    my_steps = df["total_steps"].mean()
+    kpi(s1, "My mean", fmt(my_steps, ",.0f"), "steps/day", f"{int(df['total_steps'].notna().sum())} days in window",
+        color=C["orange"])
+    kpi(s2, "US adults 20+", f"{STEPS_REF_US_ADULTS:,}", "steps/day", "hip accelerometer, pedometer-scaled")
+    kpi(s3, "Ratio", fmt(my_steps / STEPS_REF_US_ADULTS, ".2f"), "×", "my mean ÷ reference mean")
+    st.markdown('<div style="height:.6rem"></div>', unsafe_allow_html=True)
+    note("<b>Why this one is only a rough guide.</b> The reference is a single figure for all US adults aged 20 and "
+         "over — it is not split by age or sex — measured with a hip-worn research accelerometer in 2005–2006, with "
+         "low-intensity steps removed to mimic a pedometer. Mine come from a wrist watch plus phone two decades "
+         "later, with different step-detection algorithms and no such censoring. Different sensor location, different "
+         "algorithm, different era: read the ratio as \"more or less than a typical adult\", not as a precise multiple.")
+
+    # ---- HRV: deliberately no comparison --------------------------------------
+    section("Heart-rate variability", "deliberately not compared")
+    note("No reference line is drawn for HRV. Published SDNN norms come from <b>24-hour ECG</b> recordings; the watch "
+         "reports SDNN from <b>~1-minute optical (PPG)</b> windows taken a few times a day. SDNN grows with recording "
+         "length — a full day contains slow circadian swings a one-minute window cannot — so the two numbers are on "
+         "different scales, and plotting one against the other would be a category error. HRV is tracked against my "
+         "own baseline instead (Cardiovascular tab). Mean heart rate, zone minutes and TRIMP have no population "
+         "norms at all, for the same reason: they depend on how and when the device samples.")
+
+    section("Sources")
+    note("<ul style='margin:.1rem 0 0 1rem;padding:0'>"
+         "<li><b>VO₂max</b> — Kaminsky et al., <i>Mayo Clinic Proceedings</i> 2015, FRIEND registry, Table 3. "
+         "7,783 maximal treadmill tests with gas analysis, US adults 20–79 without cardiovascular disease.</li>"
+         "<li><b>Resting heart rate</b> — Ostchega et al., <i>National Health Statistics Reports</i> no. 41, 2011, "
+         "Tables 2–3. NHANES 1999–2008; pulse counted after about four minutes of seated rest.</li>"
+         "<li><b>Steps per day</b> — Tudor-Locke et al., <i>Int J Behav Nutr Phys Act</i> 2010. NHANES 2005–2006, "
+         "3,522 US adults aged 20+; hip-worn ActiGraph accelerometer, censored steps.</li></ul>")
+    st.caption("Percentiles between tabulated values are linearly interpolated; values outside the 5th–95th range are "
+               "reported only as below/above. Reference numbers are transcribed from the cited tables.")
 
 # ----------------------------------------------------------------------------- Circadian
 with tab_circ:
@@ -1032,6 +1219,7 @@ with tab_data:
              "<li><b>Workout detection</b> — samples ≤ 15 s apart (the Watch's workout-mode cadence).</li>"
              "<li><b>Training load</b> — Edwards TRIMP, Σ minutes-in-zone × zone index.</li>"
              "<li><b>Baselines</b> — 7-day rolling mean ± 1 SD on calendar days (≥ 3 valid days); anomaly = > 2 SD from the preceding 14-day baseline (≥ 7 valid days).</li>"
+             "<li><b>Population context</b> — published US percentile tables by age and sex (FRIEND, NHANES); my value placed by linear interpolation between tabulated percentiles.</li>"
              "<li><b>Gaps</b> — unworn days stay empty; nothing is interpolated, and next-day pairs use consecutive calendar days only.</li>"
              "<li><b>Statistics</b> — Pearson & Spearman with two-sided p-values; OLS with 95 % CI of the mean response.</li>"
              "</ul>")
@@ -1045,6 +1233,7 @@ with tab_data:
              "<li>HRV is PPG-derived SDNN from ~1-minute windows — not comparable to 24-h ECG clinical norms.</li>"
              "<li>Workout detection from sampling cadence is a proxy, not Apple's workout log (a workout left running inflates it).</li>"
              "<li>Several correlations are tested without multiple-comparison correction.</li>"
+             "<li>Population comparisons cross a measurement-method gap (wearable estimate vs lab/clinic) and are national, not regional.</li>"
              "<li>Nothing here is diagnostic.</li></ul>", "warn")
 
     section("Daily table", "every value the charts above are built from")
