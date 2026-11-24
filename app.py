@@ -32,7 +32,7 @@ st.set_page_config(
     page_title="Wearable Health Insights",
     page_icon="❤️",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
 )
 
 # Colour system - dark "instrument panel" theme. Series colours are the dark-mode
@@ -171,6 +171,26 @@ st.markdown(
         border: 1px solid {C["line"]} !important; box-shadow: 0 8px 24px rgba(0,0,0,.25); }}
     div[data-testid="stTab"] p {{ font-weight: 600; font-size: .92rem; }}
     .diagram svg {{ width: 100%; height: auto; display: block; }}
+
+    /* ---- Phone / narrow screens only (laptop layout above is untouched) ---- */
+    @media (max-width: 768px) {{
+        .block-container {{ padding-top: 3rem; padding-left: 1rem; padding-right: 1rem; }}
+        /* hero: stack the text above the pulse strip instead of side by side */
+        .hero {{ flex-direction: column; align-items: stretch; gap: .9rem; }}
+        .hero-title {{ font-size: 1.9rem !important; }}
+        .hero-sub {{ font-size: .93rem !important; max-width: none; }}
+        .pulse-wrap {{ flex: 0 0 auto; width: 100%; max-width: 340px; }}
+        .telemetry {{ line-height: 1.7; }}
+        /* section headers: let the title wrap and drop the subtitle to its own line */
+        .section {{ flex-wrap: wrap; row-gap: .15rem; }}
+        .section h3 {{ white-space: normal; flex: 1 1 0; min-width: 0; }}
+        .section span {{ flex: 0 0 100%; }}
+        .kpi {{ min-height: 0; }}
+        .kpi-value {{ font-size: 1.7rem; }}
+        /* sensor schematic: keep its labels readable, scroll sideways instead of shrinking */
+        .diagram {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
+        .diagram svg {{ min-width: 680px; }}
+    }}
     </style>
     """,
     unsafe_allow_html=True,
