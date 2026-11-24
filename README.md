@@ -173,22 +173,6 @@ With MATLAB and the Statistics and Machine Learning Toolbox, run `correlation_an
 - Population comparisons cross a measurement-method gap (wearable estimate vs lab/clinic) and are national, not regional.
 - Nothing here is diagnostic.
 
-## Roadmap
-
-This repository is **Phase 1**: the complete software pipeline, analysis and dashboard, running on real data. Hardware is **planned for Phase 2** and has not been built yet.
-
-**Phase 2 — Hardware (planned)**
-
-- [ ] PPG prototype: ESP32 + MAX30102 optical sensor, streaming raw photodiode samples
-- [ ] Run the same SciPy chain used in the simulator (band-pass → peak detection) on the prototype's live signal
-- [ ] SolidWorks-designed, 3D-printed wrist enclosure
-- [ ] A dashboard page for the prototype's own captured data, validated against the Watch
-
-**Other ideas**
-
-- [ ] Sleep-stage data joined to next-morning HRV
-- [ ] Sleep insights (pending consistent sleep-tracking data)
-
 ## Author
 
 **Nabeel Abdel** — Biomedical Engineering, San José State University

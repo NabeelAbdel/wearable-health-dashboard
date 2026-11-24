@@ -126,7 +126,6 @@ st.markdown(
     .pill {{ font-family: {MONO}; font-size: .7rem; font-weight: 600; padding: .28rem .65rem; border-radius: 6px;
              background: rgba(255,255,255,.03); border: 1px solid {C["line"]}; color: {C["ink2"]}; }}
     .pill.accent {{ background: rgba(57,135,229,.18); border-color: rgba(57,135,229,.6); color: #CFE2FB; }}
-    .pill.planned {{ border-style: dashed; }}
 
     /* animated pulse strip in the hero */
     .pulse-wrap {{ flex: 0 0 300px; }}
@@ -533,7 +532,7 @@ st.markdown(
     'MATLAB. Trend tool, not a diagnostic one.</p>'
     '<div class="pills"><span class="pill accent">Python · pandas</span><span class="pill">Plotly</span>'
     '<span class="pill">SciPy signal processing</span><span class="pill">MATLAB · Statistics Toolbox</span>'
-    '<span class="pill">Streamlit</span><span class="pill planned">Phase 2 · ESP32 + MAX30102 · SolidWorks</span></div>'
+    '<span class="pill">Streamlit</span></div>'
     '</div>' + pulse_svg() + '</div>',
     unsafe_allow_html=True)
 
@@ -1076,9 +1075,8 @@ with tab_sensor:
          "removes most of it, then starts dropping beats at high heart rates where each pulse is narrow — the "
          "same regime where real wrist sensors struggle. Enable the motion burst: a 1.6 Hz artefact sits "
          "inside the pulse band, so filtering alone cannot remove it; spurious peaks appear and SDNN explodes. That is exactly why real devices gate on accelerometer data and "
-         "why the watch's dense workout sampling is paired with motion-aware algorithms. The same "
-         "<code>scipy.signal</code> chain (Butterworth SOS filter → <code>find_peaks</code>) is what the Phase 2 "
-         "MAX30102 prototype will run on its raw photodiode stream.")
+         "why the watch's dense workout sampling is paired with motion-aware algorithms. The chain here is "
+         "<code>scipy.signal</code>: a Butterworth SOS band-pass filter followed by <code>find_peaks</code>.")
 
 # ----------------------------------------------------------------------------- Statistics
 def render_statistics():
